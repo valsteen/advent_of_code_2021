@@ -1,18 +1,16 @@
+use std::io;
+use std::io::BufRead;
+
 fn main() {
-    let input = "199
-200
-208
-210
-200
-207
-240
-269
-260
-263";
-    let measurements = input.split('\n').map(|x| x.parse::<i32>().unwrap());
+    let stdin = io::stdin();
+    let measurements = stdin
+        .lock()
+        .lines()
+        .flatten()
+        .map(|x| x.parse::<i32>().unwrap());
 
     let increases = measurements
-        .scan(None, |previous: &mut Option<i32>, current| {
+        .scan(None, |previous, current| {
             let is_increase = match previous {
                 None => false,
                 Some(value) => current > *value,

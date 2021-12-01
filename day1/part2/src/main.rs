@@ -1,18 +1,13 @@
 use itertools::Itertools;
+use std::io;
+use std::io::BufRead;
 
 fn main() {
-    let input = "199
-200
-208
-210
-200
-207
-240
-269
-260
-263";
-    let measurements: Vec<i32> = input
-        .split('\n')
+    let stdin = io::stdin();
+    let measurements = stdin
+        .lock()
+        .lines()
+        .flatten()
         .map(|x| x.parse::<i32>().unwrap())
         .collect_vec();
     let windows = measurements.windows(3);
