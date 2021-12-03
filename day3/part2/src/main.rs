@@ -2,34 +2,35 @@ use std::cmp::Ordering;
 use std::io;
 use std::io::{BufRead, Stdin};
 
-fn compute(mut lines: Vec<Vec<u8>>, default: u8) -> Option<usize> {
-    let width = lines.get(0).unwrap().len();
-    for x in 0..width {
-        let ones: usize = (0..lines.len())
-            .map(|y| *lines.get(y).unwrap().get(x).unwrap() as usize)
-            .sum();
-        let keep = match (ones * 2).cmp(&lines.len()) {
-            Ordering::Less => (default + 1) % 2,
-            Ordering::Greater | Ordering::Equal => default,
-        };
+fn compute(lines: Vec<Vec<u8>>, x: usize, default: u8) -> usize {
+    if lines.len() == 1 {
+        let line = lines.first().unwrap();
+        return line.iter().fold(0usize, |acc, x| acc * 2 + *x as usize);
+    }
 
-        lines = lines
+    let ones: usize = lines
+        .iter()
+        .map(|line| *line.get(x).unwrap() as usize)
+        .sum();
+    let keep = match (ones * 2).cmp(&lines.len()) {
+        Ordering::Less => (default + 1) % 2,
+        Ordering::Greater | Ordering::Equal => default,
+    };
+
+    compute(
+        lines
             .into_iter()
             .filter(|line| *line.get(x).unwrap() == keep)
-            .collect();
-
-        if lines.len() == 1 {
-            let line = lines.pop().unwrap();
-            return Some(line.iter().fold(0usize, |acc, x| acc * 2 + *x as usize));
-        }
-    }
-    None
+            .collect(),
+        x + 1,
+        default,
+    )
 }
 
 fn main() {
     let lines: Vec<Vec<u8>> = Reader::new().lines().collect();
-    let oxygen = compute(lines.clone(), 1).unwrap();
-    let co2 = compute(lines, 0).unwrap();
+    let oxygen = compute(lines.clone(), 0, 1);
+    let co2 = compute(lines, 0, 0);
     println!("{} {} {}", oxygen, co2, oxygen * co2)
 }
 
