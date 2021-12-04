@@ -47,13 +47,11 @@ impl Grid {
 
 fn main() {
     let stdin = io::stdin();
-    let mut lines = stdin.lock().lines().flatten();
+    let mut lines = stdin.lock().lines().flatten().chain(["".to_string()]);
+    let draws = lines.next().unwrap().split(',').map(str::parse).flatten().collect_vec();
+    let lines = lines.skip(1);
 
-    let draws: Vec<u8> = lines.next().unwrap().split(',').map(str::parse).flatten().collect();
-
-    let lines = lines.skip(1).chain(vec!["".to_string()]);
-
-    let mut grids: Vec<Grid> = lines
+    let mut grids = lines
         .scan(vec![], |grid, line| {
             let numbers = line.split_whitespace().map(str::parse).flatten().collect_vec();
             if numbers.is_empty() {
@@ -64,7 +62,7 @@ fn main() {
             }
         })
         .flatten()
-        .collect();
+        .collect_vec();
 
     'main: for draw in draws {
         for (n, grid) in grids.iter_mut().enumerate() {
