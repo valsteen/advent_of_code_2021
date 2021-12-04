@@ -26,14 +26,9 @@ impl FromStr for Action {
 
 fn main() {
     let stdin = io::stdin();
-    let actions = stdin
-        .lock()
-        .lines()
-        .flatten()
-        .map(|s| Action::from_str(s.borrow()))
-        .flatten();
+    let actions = stdin.lock().lines().flatten().map(|s| Action::from_str(s.borrow())).flatten();
 
-    let mut aim = 0 ;
+    let mut aim = 0;
     let mut depth = 0;
     let mut position = 0;
 

@@ -4,12 +4,8 @@ use std::io::BufRead;
 
 fn main() {
     let stdin = io::stdin();
-    let measurements = stdin
-        .lock()
-        .lines()
-        .flatten()
-        .map(|x| x.parse::<i32>().unwrap())
-        .collect_vec();
+    let measurements =
+        stdin.lock().lines().flatten().map(|x| x.parse::<i32>().unwrap()).collect_vec();
     let windows = measurements.windows(3);
 
     let increases = windows

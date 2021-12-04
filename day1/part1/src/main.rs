@@ -3,11 +3,7 @@ use std::io::BufRead;
 
 fn main() {
     let stdin = io::stdin();
-    let measurements = stdin
-        .lock()
-        .lines()
-        .flatten()
-        .map(|x| x.parse::<i32>().unwrap());
+    let measurements = stdin.lock().lines().flatten().map(|x| x.parse::<i32>().unwrap());
 
     let increases = measurements
         .scan(None, |previous, current| {

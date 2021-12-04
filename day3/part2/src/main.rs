@@ -8,20 +8,14 @@ fn compute(lines: Vec<Vec<u8>>, x: usize, default: u8) -> usize {
         return line.iter().fold(0usize, |acc, x| acc * 2 + *x as usize);
     }
 
-    let ones: usize = lines
-        .iter()
-        .map(|line| *line.get(x).unwrap() as usize)
-        .sum();
+    let ones: usize = lines.iter().map(|line| *line.get(x).unwrap() as usize).sum();
     let keep = match (ones * 2).cmp(&lines.len()) {
         Ordering::Less => (default + 1) % 2,
         Ordering::Greater | Ordering::Equal => default,
     };
 
     compute(
-        lines
-            .into_iter()
-            .filter(|line| *line.get(x).unwrap() == keep)
-            .collect(),
+        lines.into_iter().filter(|line| *line.get(x).unwrap() == keep).collect(),
         x + 1,
         default,
     )

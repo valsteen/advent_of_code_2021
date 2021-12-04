@@ -8,9 +8,8 @@ fn main() {
     let mut gamma = 0;
     let mut epsilon = 0;
     for x in 0..width {
-        let ones: usize = (0..lines.len())
-            .map(|y| *lines.get(y).unwrap().get(x).unwrap() as usize)
-            .sum();
+        let ones: usize =
+            (0..lines.len()).map(|y| *lines.get(y).unwrap().get(x).unwrap() as usize).sum();
         let one_most_common = ones > lines.len() / 2;
         gamma = gamma * 2 + if one_most_common { 1 } else { 0 };
         epsilon = epsilon * 2 + if one_most_common { 0 } else { 1 };
