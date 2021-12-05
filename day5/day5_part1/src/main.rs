@@ -1,7 +1,8 @@
 use itertools::Itertools;
 use std::collections::HashMap;
-use std::io::Read;
 use std::io;
+use std::io::Read;
+use std::iter::successors;
 
 fn main() {
     let mut grid = HashMap::<_, usize>::new();
@@ -11,16 +12,11 @@ fn main() {
     let lines =
         lines.into_iter().map(|(_, v)| String::from_iter(v).parse::<i32>()).flatten().tuples();
 
-    for (x1, y1, x2, y2) in lines {
-        if x1 == x2 {
-            for y in [y1..=y2, y2..=y1].into_iter().flatten() {
-                *grid.entry((x1, y)).or_default() += 1;
-            }
-        }
-        if y1 == y2 {
-            for x in [x1..=x2, x2..=x1].into_iter().flatten() {
-                *grid.entry((x, y1)).or_default() += 1;
-            }
+    for (x1, y1, x2, y2) in lines.filter(|(x1, y1, x2, y2)| x1 == x2 || y1 == y2) {
+        for (x, y) in successors(Some((x1, y1)), |(x, y)| {
+            ((*x, *y) != (x2, y2)).then(|| (x + (x2 - x1).signum(), y + (y2 - y1).signum()))
+        }) {
+            *grid.entry((x, y)).or_default() += 1;
         }
     }
 
