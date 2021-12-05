@@ -9,7 +9,7 @@ fn main() {
         .lock()
         .bytes()
         .flatten()
-        .map(char::from)
+        .map_into()
         .scan(String::new(), |acc, d| {
             if ('0'..='9').contains(&d) {
                 acc.push(d);
