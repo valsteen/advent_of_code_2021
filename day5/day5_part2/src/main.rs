@@ -19,22 +19,24 @@ fn main() {
             }
         })
         .flatten()
-        .map(|s| s.parse())
+        .map(|s| s.parse::<i32>())
         .flatten()
-        .tuples::<(i32, i32, i32, i32)>();
+        .tuples();
 
-    let mut grid = HashMap::<(i32, i32), usize>::new();
-    for line in lines {
-        let dx = line.2 - line.0;
-        let dy = line.3 - line.1;
+    let mut grid = HashMap::<_, usize>::new();
+    for (x1, y1, x2, y2) in lines {
+        let dx = x2 - x1;
+        let dy = y2 - y1;
 
-        let mut pos = (line.0, line.1);
+        let mut pos = (x1, y1);
         let incx = if dx == 0 { 0 } else { dx / dx.abs() };
         let incy = if dy == 0 { 0 } else { dy / dy.abs() };
 
         loop {
             *grid.entry(pos).or_default() += 1;
-            if pos == (line.2, line.3) { break }
+            if pos == (x2, y2) {
+                break;
+            }
             pos.0 += incx;
             pos.1 += incy;
         }
