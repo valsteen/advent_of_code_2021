@@ -24,21 +24,20 @@ fn main() {
         .tuples();
 
     let mut grid = HashMap::<_, usize>::new();
-    for (x1, y1, x2, y2) in lines {
+    for (mut x1, mut y1, x2, y2) in lines {
         let dx = x2 - x1;
         let dy = y2 - y1;
 
-        let mut pos = (x1, y1);
         let incx = if dx == 0 { 0 } else { dx / dx.abs() };
         let incy = if dy == 0 { 0 } else { dy / dy.abs() };
 
         loop {
-            *grid.entry(pos).or_default() += 1;
-            if pos == (x2, y2) {
+            *grid.entry((x1, y1)).or_default() += 1;
+            if (x1, y1) == (x2, y2) {
                 break;
             }
-            pos.0 += incx;
-            pos.1 += incy;
+            x1 += incx;
+            y1 += incy;
         }
     }
 
