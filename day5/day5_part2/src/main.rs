@@ -1,6 +1,7 @@
 use itertools::Itertools;
 use std::collections::HashMap;
 use std::io::Read;
+use std::iter::successors;
 use std::{io, mem};
 
 fn main() {
@@ -31,13 +32,10 @@ fn main() {
         let incx = if dx == 0 { 0 } else { dx / dx.abs() };
         let incy = if dy == 0 { 0 } else { dy / dy.abs() };
 
-        loop {
-            *grid.entry((x1, y1)).or_default() += 1;
-            if (x1, y1) == (x2, y2) {
-                break;
-            }
-            x1 += incx;
-            y1 += incy;
+        for (x, y) in successors(Some((x1, y1)), |(x, y)| {
+            ((*x, *y) != (x2, y2)).then(|| (x + incx, y + incy))
+        }) {
+            *grid.entry((x, y)).or_default() += 1;
         }
     }
 
