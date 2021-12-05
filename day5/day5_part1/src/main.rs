@@ -1,38 +1,25 @@
 use itertools::Itertools;
 use std::collections::HashMap;
 use std::io::Read;
-use std::{io, mem};
+use std::io;
 
 fn main() {
-    let stdin = io::stdin();
-    let lines = stdin
-        .lock()
-        .bytes()
-        .flatten()
-        .map(char::from)
-        .scan(String::new(), |acc, d| {
-            if ('0'..='9').contains(&d) {
-                acc.push(d);
-                Some(None)
-            } else {
-                Some(Some(mem::take(acc)))
-            }
-        })
-        .flatten()
-        .map(|s| s.parse())
-        .flatten()
-        .tuples::<(usize, usize, usize, usize)>();
+    let mut grid = HashMap::<_, usize>::new();
 
-    let mut grid = HashMap::<(usize, usize), usize>::new();
-    for line in lines {
-        if line.0 == line.2 {
-            for y in [line.1..=line.3, line.3..=line.1].into_iter().flatten() {
-                *grid.entry((line.0, y)).or_default() += 1;
+    let stdin = io::stdin();
+    let lines = stdin.lock().bytes().flatten().map_into::<char>().group_by(|c| c.is_digit(10));
+    let lines =
+        lines.into_iter().map(|(_, v)| String::from_iter(v).parse::<i32>()).flatten().tuples();
+
+    for (x1, y1, x2, y2) in lines {
+        if x1 == x2 {
+            for y in [y1..=y2, y2..=y1].into_iter().flatten() {
+                *grid.entry((x1, y)).or_default() += 1;
             }
         }
-        if line.1 == line.3 {
-            for x in [line.0..=line.2, line.2..=line.0].into_iter().flatten() {
-                *grid.entry((x, line.1)).or_default() += 1;
+        if y1 == y2 {
+            for x in [x1..=x2, x2..=x1].into_iter().flatten() {
+                *grid.entry((x, y1)).or_default() += 1;
             }
         }
     }
