@@ -15,7 +15,7 @@ fn main() {
     for _ in 0..256 {
         let mut next = HashMap::new();
 
-        for (age, count) in counts_per_age.into_iter() {
+        for (age, count) in counts_per_age {
             match age {
                 0 => {
                     *next.entry(6).or_default() += count;
