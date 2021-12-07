@@ -10,7 +10,6 @@ fn main() {
 
     if let MinMaxResult::MinMax(min, max) = positions.iter().minmax() {
         let (destination, fuel) = (*min..=*max)
-            .into_iter()
             .map(|destination: i32| {
                 let fuel: i32 =
                     positions.iter().map(|position| (*position - destination).abs()).sum();
