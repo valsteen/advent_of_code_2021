@@ -5,7 +5,7 @@ use std::io::Read;
 fn main() {
     let stdin = io::stdin();
     let positions = stdin.lock().bytes().flatten().map_into::<char>().group_by(|c| c.is_digit(10));
-    let mut positions = positions
+    let positions = positions
         .into_iter()
         .map(|(_, v)| String::from_iter(v).parse::<i64>())
         .flatten()
@@ -21,8 +21,7 @@ fn main() {
                         let diff = (*position - destination).abs();
                         diff * (diff + 1) / 2
                     })
-                    .sum1()
-                    .unwrap();
+                    .sum();
                 (destination, fuel)
             })
             .min_by_key(|(_, fuel)| *fuel)
