@@ -11,8 +11,6 @@ fn main() {
         .flatten()
         .collect_vec();
 
-    positions.sort_unstable();
-
     if let MinMaxResult::MinMax(min, max) = positions.iter().minmax() {
         let (destination, fuel) = (*min..=*max)
             .into_iter()
