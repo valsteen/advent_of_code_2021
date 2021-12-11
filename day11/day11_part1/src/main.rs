@@ -1,4 +1,3 @@
-use std::collections::HashSet;
 use std::io;
 use std::io::Read;
 
@@ -37,29 +36,27 @@ fn apply_step_to_neighbours<T: FnMut(usize, usize)>(x: usize, y: usize, mut f: T
 }
 
 fn step(grid: &mut [[u8; 10]; 10]) -> usize {
-    let mut flashes_to_process = HashSet::<(usize, usize)>::new();
+    let mut flashes_to_process = vec![];
 
     for (x, line) in grid.iter_mut().enumerate() {
         for (y, item) in line.iter_mut().enumerate() {
             *item += 1;
             if *item == 10 {
-                flashes_to_process.insert((x, y));
+                flashes_to_process.push((x, y));
             }
         }
     }
 
     let mut flashes = 0;
 
-    while !flashes_to_process.is_empty() {
-        flashes += flashes_to_process.len();
-        for (x, y) in flashes_to_process.drain().collect::<Vec<_>>() {
-            apply_step_to_neighbours(x, y, |x, y| {
-                grid[x][y] += 1;
-                if grid[x][y] == 10 {
-                    flashes_to_process.insert((x, y));
-                }
-            });
-        }
+    while let Some((x, y)) = flashes_to_process.pop() {
+        flashes += 1;
+        apply_step_to_neighbours(x, y, |x, y| {
+            grid[x][y] += 1;
+            if grid[x][y] == 10 {
+                flashes_to_process.push((x, y));
+            }
+        });
     }
 
     for (_, line) in grid.iter_mut().enumerate() {
