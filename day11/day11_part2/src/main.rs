@@ -2,8 +2,6 @@ use std::collections::HashSet;
 use std::io;
 use std::io::Read;
 
-type Grid = [[u8; 10]; 10];
-
 fn neighbours(x: usize, y: usize) -> Vec<(usize, usize)> {
     let mut result = vec![];
     if x > 0 {
@@ -41,7 +39,7 @@ fn neighbours(x: usize, y: usize) -> Vec<(usize, usize)> {
     result
 }
 
-fn step(grid: &mut Grid) -> usize {
+fn step(grid: &mut [[u8; 10]; 10]) -> usize {
     let mut flashes_to_process = HashSet::<(usize, usize)>::new();
 
     for (x, line) in grid.iter_mut().enumerate() {
