@@ -3,28 +3,35 @@ use maplit::hashmap;
 use std::collections::HashMap;
 use std::io;
 use std::io::Read;
+use std::ops::ControlFlow;
+use std::ops::ControlFlow::{Break, Continue};
 
-fn permutations(wire_to_segment: Vec<Vec<u8>>) -> Vec<Vec<u8>> {
-    let segments = match wire_to_segment.first() {
-        None => return vec![vec![]],
-        Some(segments) => segments,
+fn permutations<F: FnMut(Vec<u8>) -> ControlFlow<Vec<usize>>>(
+    result: Vec<u8>,
+    wire_to_segment: Vec<Vec<u8>>,
+    f: &mut F,
+) -> ControlFlow<Vec<usize>> {
+    let (segments, wire_to_segment) = match wire_to_segment.split_first() {
+        None => {
+            f(result)?;
+            return Continue(());
+        }
+        Some((segments, wire_to_segment)) => (segments, wire_to_segment),
     };
 
-    let mut result = vec![];
-    for segment in segments {
-        let mut wire_to_segment = wire_to_segment[1..].to_vec();
+    for &segment in segments {
+        let mut result = result.clone();
+        let mut wire_to_segment = wire_to_segment.to_vec();
+
         for segments in wire_to_segment.iter_mut() {
-            segments.retain(|segment_| segment_ != segment);
+            segments.retain(|&segment_| segment_ != segment);
         }
 
-        for next_permutation in permutations(wire_to_segment) {
-            let mut permutations = vec![*segment];
-            permutations.extend(next_permutation);
-            result.push(permutations);
-        }
+        result.push(segment);
+        permutations(result, wire_to_segment, f)?;
     }
 
-    result
+    Continue(())
 }
 
 fn main() {
@@ -69,7 +76,6 @@ fn main() {
 
     let mut result = vec![];
 
-    #[allow(clippy::never_loop)]
     for (patterns, displayed_patterns) in &lines {
         let mut wire_to_segments: Vec<Vec<u8>> = (0..=6).map(|_| ((0..=6).collect())).collect();
 
@@ -88,9 +94,8 @@ fn main() {
             }
         }
 
-        let pattern_indexes_to_digit = permutations(wire_to_segments.clone())
-            .iter()
-            .map(|wire_to_segment| {
+        let pattern_indexes_to_digit = if let Break(value) =
+            permutations(vec![], wire_to_segments.clone(), &mut |wire_to_segment: Vec<u8>| {
                 let pattern_index_to_digit = patterns
                     .iter()
                     .map(|wires| {
@@ -104,25 +109,26 @@ fn main() {
                     .flatten()
                     .collect_vec();
                 if pattern_index_to_digit.len() == patterns.len() {
-                    Some(pattern_index_to_digit)
+                    Break(pattern_index_to_digit)
                 } else {
-                    None
+                    Continue(())
                 }
-            })
-            .flatten()
-            .next()
-            .unwrap();
+            }) {
+            value
+        } else {
+            unreachable!()
+        };
 
         let mut number = 0;
         for displayed_pattern in displayed_patterns {
             let pattern_index =
                 patterns.iter().position(|pattern| pattern.eq(displayed_pattern)).unwrap();
-            let digit = pattern_indexes_to_digit.get(pattern_index).unwrap();
-            number = number * 10 + digit;
+            let &digit = pattern_indexes_to_digit.get(pattern_index).unwrap();
+            number = number * 10 + digit as usize;
         }
 
         result.push(number);
     }
 
-    println!("{:?}", result.iter().sum::<usize>());
+    println!("{:?}", result.into_iter().sum::<usize>());
 }
