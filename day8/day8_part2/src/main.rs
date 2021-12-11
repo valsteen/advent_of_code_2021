@@ -95,7 +95,7 @@ fn main() {
         }
 
         let pattern_indexes_to_digit = if let Break(value) =
-            permutations(vec![], wire_to_segments.clone(), &mut |wire_to_segment: Vec<u8>| {
+            permutations(vec![], wire_to_segments, &mut |wire_to_segment: Vec<u8>| {
                 let pattern_index_to_digit = patterns
                     .iter()
                     .map(|wires| {
