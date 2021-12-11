@@ -2,41 +2,38 @@ use std::collections::HashSet;
 use std::io;
 use std::io::Read;
 
-fn neighbours(x: usize, y: usize) -> Vec<(usize, usize)> {
-    let mut result = vec![];
+fn apply_step_to_neighbours<T: FnMut(usize, usize)>(x: usize, y: usize, mut f: T) {
     if x > 0 {
-        result.push((x - 1, y));
+        f(x - 1, y);
 
         if y > 0 {
-            result.push((x - 1, y - 1))
+            f(x - 1, y - 1)
         }
 
         if y < 9 {
-            result.push((x - 1, y + 1))
+            f(x - 1, y + 1)
         }
     }
 
     if y > 0 {
-        result.push((x, y - 1))
+        f(x, y - 1)
     }
 
     if y < 9 {
-        result.push((x, y + 1))
+        f(x, y + 1)
     }
 
     if x < 9 {
-        result.push((x + 1, y));
+        f(x + 1, y);
 
         if y > 0 {
-            result.push((x + 1, y - 1))
+            f(x + 1, y - 1)
         }
 
         if y < 9 {
-            result.push((x + 1, y + 1))
+            f(x + 1, y + 1)
         }
     }
-
-    result
 }
 
 fn step(grid: &mut [[u8; 10]; 10]) -> usize {
@@ -56,12 +53,12 @@ fn step(grid: &mut [[u8; 10]; 10]) -> usize {
     while !flashes_to_process.is_empty() {
         flashes += flashes_to_process.len();
         for (x, y) in flashes_to_process.drain().collect::<Vec<_>>() {
-            for (x1, y1) in neighbours(x, y) {
-                grid[x1][y1] += 1;
-                if grid[x1][y1] == 10 {
-                    flashes_to_process.insert((x1, y1));
+            apply_step_to_neighbours(x, y, |x, y| {
+                grid[x][y] += 1;
+                if grid[x][y] == 10 {
+                    flashes_to_process.insert((x, y));
                 }
-            }
+            });
         }
     }
 
