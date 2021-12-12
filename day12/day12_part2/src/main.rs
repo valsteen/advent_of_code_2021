@@ -9,6 +9,10 @@ fn visit(
     counter: &mut i32,
 ) {
     for &destination in &paths[current.abs() as usize] {
+        if destination == 0 {
+            *counter += 1;
+            continue;
+        }
         let visited_small_cave = if destination.is_positive() {
             visited_small_cave
         } else {
@@ -18,10 +22,6 @@ fn visit(
                 _ => continue,
             }
         };
-        if destination == 0 {
-            *counter += 1;
-            continue;
-        }
         visited[destination.abs() as usize] += 1;
         visit(paths, destination, visited, visited_small_cave, counter);
         visited[destination.abs() as usize] -= 1;
