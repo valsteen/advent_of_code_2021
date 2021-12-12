@@ -1,41 +1,40 @@
 use itertools::Itertools;
-use std::collections::HashMap;
 use std::io::{stdin, BufRead};
 
 fn visit(
-    paths: &HashMap<i32, Vec<i32>>,
-    visited: &mut Vec<i32>,
+    paths: &[Vec<i32>],
+    current: i32,
+    visited: &mut [bool],
     visited_small_cave: bool,
     counter: &mut i32,
 ) {
-    let &current = visited.last().unwrap();
-    if current == 0 {
-        *counter += 1;
-        return;
-    }
-    if let Some(destinations) = paths.get(&current) {
-        for destination in destinations {
-            let visited_small_cave = if destination.is_positive() {
-                visited_small_cave
-            } else {
-                let was_visited = visited.contains(destination);
-                match (visited_small_cave, was_visited) {
-                    (_, false) => visited_small_cave,
-                    (false, true) => true,
-                    _ => continue,
-                }
-            };
-
-            visited.push(*destination);
-            visit(paths, visited, visited_small_cave, counter);
-            visited.pop().unwrap();
+    for &destination in &paths[current.abs() as usize] {
+        let visited_small_cave = if destination.is_positive() {
+            visited_small_cave
+        } else {
+            match (visited_small_cave, visited[-destination as usize]) {
+                (_, false) => visited_small_cave,
+                (false, true) => true,
+                _ => continue,
+            }
+        };
+        if destination == 0 {
+            *counter += 1;
+            continue;
         }
+        let prev = visited[destination.abs() as usize];
+        visited[destination.abs() as usize] = true;
+        visit(paths, destination, visited, visited_small_cave, counter);
+        visited[destination.abs() as usize] = prev;
     }
 }
 
 fn make_id(s: &str) -> i32 {
     if s.eq("end") {
         return 0;
+    }
+    if s.eq("start") {
+        return make_id("st");
     }
     let small = s.ge("a");
     let result = s
@@ -71,7 +70,19 @@ fn main() {
         .into_group_map();
 
     let mut counter = 0;
-    visit(&paths, &mut vec![start], false, &mut counter);
+    let mut visited = [false; 1000];
+    let mut paths_reserve = Vec::new();
+    for _ in 0..=1000 {
+        paths_reserve.push(Vec::new());
+    }
+
+    let fixed_paths = paths_reserve.as_mut_slice();
+
+    for (source, destinations) in paths {
+        fixed_paths[source.abs() as usize] = destinations
+    }
+
+    visit(fixed_paths, start, &mut visited, false, &mut counter);
 
     println!("{}", counter)
 }
