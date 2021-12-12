@@ -25,7 +25,6 @@ fn visit(
                     match (visit_count, &visited_small_cave) {
                         (0, _) => Some((visited_small_cave, destination)),
                         (1, None) => Some((Some(destination), destination)),
-                        (1, Some(_)) => None,
                         _ => None,
                     }
                 }
