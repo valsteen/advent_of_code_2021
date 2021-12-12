@@ -14,19 +14,24 @@ fn visit(
         return;
     }
     if let Some(destinations) = paths.get(current) {
-        for (visited_small_cave, destination) in destinations.iter().filter_map(|destination| {
-            if destination.as_str().lt("a") {
-                Some((visited_small_cave.clone(), destination))
-            } else {
-                let visit_count = visited.iter().filter(|&cave| cave.eq(destination)).take(2).count();
-                match (visit_count, &visited_small_cave) {
-                    (0, _) => Some((visited_small_cave.clone(), destination)),
-                    (1, None) => Some((Some(destination.clone()), destination)),
-                    (1, Some(_)) => None,
-                    _ => None,
+        for (visited_small_cave, destination) in destinations
+            .iter()
+            .filter_map(|destination| {
+                if destination.as_str().lt("a") {
+                    Some((visited_small_cave.clone(), destination))
+                } else {
+                    let visit_count =
+                        visited.iter().filter(|&cave| cave.eq(destination)).take(2).count();
+                    match (visit_count, &visited_small_cave) {
+                        (0, _) => Some((visited_small_cave.clone(), destination)),
+                        (1, None) => Some((Some(destination.clone()), destination)),
+                        (1, Some(_)) => None,
+                        _ => None,
+                    }
                 }
-            }
-        }).collect_vec() {
+            })
+            .collect_vec()
+        {
             visited.push(destination.clone());
             visit(paths, visited, visited_small_cave, counter);
             visited.pop().unwrap();
