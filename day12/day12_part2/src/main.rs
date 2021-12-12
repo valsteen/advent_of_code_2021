@@ -5,7 +5,7 @@ use std::io::{stdin, BufRead};
 fn visit(
     paths: &HashMap<i32, Vec<i32>>,
     visited: &mut Vec<i32>,
-    visited_small_cave: Option<i32>,
+    visited_small_cave: bool,
     counter: &mut i32,
 ) {
     let &current = visited.last().unwrap();
@@ -22,9 +22,9 @@ fn visit(
                 } else {
                     let visit_count =
                         visited.iter().filter(|&cave| cave.eq(&destination)).take(2).count();
-                    match (visit_count, &visited_small_cave) {
-                        (0, _) => Some((visited_small_cave, destination)),
-                        (1, None) => Some((Some(destination), destination)),
+                    match (visited_small_cave, visit_count) {
+                        (_, 0) => Some((visited_small_cave, destination)),
+                        (false, 1) => Some((true, destination)),
                         _ => None,
                     }
                 }
@@ -76,7 +76,7 @@ fn main() {
         .into_group_map();
 
     let mut counter = 0;
-    visit(&paths, &mut vec![start], None, &mut counter);
+    visit(&paths, &mut vec![start], false, &mut counter);
 
     println!("{}", counter)
 }
