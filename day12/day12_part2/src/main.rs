@@ -2,13 +2,13 @@ use itertools::Itertools;
 use std::collections::HashMap;
 use std::io::{stdin, BufRead};
 
-fn visit(
-    paths: &HashMap<String, Vec<String>>,
-    visited: &mut Vec<String>,
+fn visit<'a>(
+    paths: &'a HashMap<String, Vec<String>>,
+    visited: &mut Vec<&'a str>,
     visited_small_cave: Option<String>,
     counter: &mut usize,
 ) {
-    let current = visited.last().unwrap();
+    let &current = visited.last().unwrap();
     if current.eq("end") {
         *counter += 1;
         return;
@@ -32,7 +32,7 @@ fn visit(
             })
             .collect_vec()
         {
-            visited.push(destination.clone());
+            visited.push(destination.as_str());
             visit(paths, visited, visited_small_cave, counter);
             visited.pop().unwrap();
         }
@@ -60,7 +60,7 @@ fn main() {
         .into_group_map();
 
     let mut counter = 0;
-    visit(&paths, &mut vec!["start".to_string()], None, &mut counter);
+    visit(&paths, &mut vec!["start"], None, &mut counter);
 
     println!("{}", counter)
 }
