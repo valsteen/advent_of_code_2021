@@ -10,11 +10,9 @@ fn visit(paths: &HashMap<String, Vec<String>>, visited: &[String], counter: &mut
     }
     if let Some(destinations) = paths.get(current) {
         for destination in destinations.iter().filter(|destination| {
-            !visited.iter().tuple_windows::<(_, _)>().contains(&(current, *destination))
+            !(visited.iter().tuple_windows::<(_, _)>().contains(&(current, *destination))
+                || destination.as_str().ge("a") && visited.contains(destination))
         }) {
-            if destination.as_str().ge("a") && visited.contains(destination) {
-                continue;
-            }
             let mut visited = visited.to_vec();
             visited.push(destination.clone());
             visit(paths, &visited, counter)
