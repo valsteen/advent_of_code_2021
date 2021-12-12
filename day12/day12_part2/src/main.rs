@@ -20,11 +20,10 @@ fn visit(
                 if destination.is_positive() {
                     Some((visited_small_cave, destination))
                 } else {
-                    let visit_count =
-                        visited.iter().filter(|&cave| cave.eq(&destination)).take(2).count();
-                    match (visited_small_cave, visit_count) {
-                        (_, 0) => Some((visited_small_cave, destination)),
-                        (false, 1) => Some((true, destination)),
+                    let was_visited = visited.contains(&destination);
+                    match (visited_small_cave, was_visited) {
+                        (_, false) => Some((visited_small_cave, destination)),
+                        (false, true) => Some((true, destination)),
                         _ => None,
                     }
                 }
