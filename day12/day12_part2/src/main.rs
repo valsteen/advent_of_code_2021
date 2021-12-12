@@ -4,7 +4,7 @@ use std::io::{stdin, BufRead};
 fn visit(
     paths: &[Vec<i32>],
     current: i32,
-    visited: &mut [bool],
+    visited: &mut [u8],
     visited_small_cave: bool,
     counter: &mut i32,
 ) {
@@ -13,8 +13,8 @@ fn visit(
             visited_small_cave
         } else {
             match (visited_small_cave, visited[-destination as usize]) {
-                (_, false) => visited_small_cave,
-                (false, true) => true,
+                (_, 0) => visited_small_cave,
+                (false, 1) => true,
                 _ => continue,
             }
         };
@@ -22,10 +22,9 @@ fn visit(
             *counter += 1;
             continue;
         }
-        let prev = visited[destination.abs() as usize];
-        visited[destination.abs() as usize] = true;
+        visited[destination.abs() as usize] += 1;
         visit(paths, destination, visited, visited_small_cave, counter);
-        visited[destination.abs() as usize] = prev;
+        visited[destination.abs() as usize] -= 1;
     }
 }
 
@@ -70,7 +69,7 @@ fn main() {
         .into_group_map();
 
     let mut counter = 0;
-    let mut visited = [false; 1000];
+    let mut visited = [0u8; 1000];
     let mut paths_reserve = Vec::new();
     for _ in 0..=1000 {
         paths_reserve.push(Vec::new());
