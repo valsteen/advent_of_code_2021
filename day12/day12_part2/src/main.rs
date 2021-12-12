@@ -18,13 +18,11 @@ fn visit(
             if destination.as_str().lt("a") {
                 Some((visited_small_cave.clone(), destination))
             } else {
-                let visit_count = visited.iter().filter(|&cave| cave.eq(destination)).count();
-                match visit_count {
-                    0 => Some((visited_small_cave.clone(), destination)),
-                    1 => match visited_small_cave {
-                        None => Some((Some(destination.clone()), destination)),
-                        Some(_) => None,
-                    },
+                let visit_count = visited.iter().filter(|&cave| cave.eq(destination)).take(2).count();
+                match (visit_count, &visited_small_cave) {
+                    (0, _) => Some((visited_small_cave.clone(), destination)),
+                    (1, None) => Some((Some(destination.clone()), destination)),
+                    (1, Some(_)) => None,
                     _ => None,
                 }
             }
