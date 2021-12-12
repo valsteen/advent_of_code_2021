@@ -4,7 +4,7 @@ use std::io::{stdin, BufRead};
 
 fn visit(
     paths: &HashMap<String, Vec<String>>,
-    visited: &[String],
+    visited: &mut Vec<String>,
     visited_small_cave: Option<String>,
     counter: &mut usize,
 ) {
@@ -26,10 +26,10 @@ fn visit(
                     _ => None,
                 }
             }
-        }) {
-            let mut visited = visited.to_vec();
+        }).collect_vec() {
             visited.push(destination.clone());
-            visit(paths, &visited, visited_small_cave, counter)
+            visit(paths, visited, visited_small_cave, counter);
+            visited.pop().unwrap();
         }
     }
 }
@@ -55,7 +55,7 @@ fn main() {
         .into_group_map();
 
     let mut counter = 0;
-    visit(&paths, &["start".to_string()], None, &mut counter);
+    visit(&paths, &mut vec!["start".to_string()], None, &mut counter);
 
     println!("{}", counter)
 }
