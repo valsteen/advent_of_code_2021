@@ -5,7 +5,7 @@ use std::io::{stdin, BufRead};
 fn visit<'a>(
     paths: &'a HashMap<String, Vec<String>>,
     visited: &mut Vec<&'a str>,
-    visited_small_cave: Option<String>,
+    visited_small_cave: Option<&'a str>,
     counter: &mut usize,
 ) {
     let &current = visited.last().unwrap();
@@ -18,13 +18,13 @@ fn visit<'a>(
             .iter()
             .filter_map(|destination| {
                 if destination.as_str().lt("a") {
-                    Some((visited_small_cave.clone(), destination))
+                    Some((visited_small_cave, destination))
                 } else {
                     let visit_count =
                         visited.iter().filter(|&cave| cave.eq(destination)).take(2).count();
                     match (visit_count, &visited_small_cave) {
-                        (0, _) => Some((visited_small_cave.clone(), destination)),
-                        (1, None) => Some((Some(destination.clone()), destination)),
+                        (0, _) => Some((visited_small_cave, destination)),
+                        (1, None) => Some((Some(destination), destination)),
                         (1, Some(_)) => None,
                         _ => None,
                     }
