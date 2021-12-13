@@ -1,7 +1,7 @@
 use std::io;
 use std::io::Read;
 
-fn apply_step_to_neighbours<T: FnMut(usize, usize)>(x: usize, y: usize, mut f: T) {
+fn apply_step_to_neighbours(x: usize, y: usize, mut f: impl FnMut(usize, usize)) {
     if x > 0 {
         f(x - 1, y);
 
