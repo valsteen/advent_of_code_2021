@@ -1,5 +1,5 @@
-use std::cmp::Reverse;
-use std::collections::{HashMap, HashSet};
+use std::cmp::Ordering;
+use std::collections::{BinaryHeap, HashMap};
 use std::io;
 use std::io::BufRead;
 
@@ -21,27 +21,41 @@ fn neighbours(x: i32, y: i32, width: i32, height: i32, mut f: impl FnMut(i32, i3
     }
 }
 
+struct Visit {
+    x: i32,
+    y: i32,
+    score: (i32, i32, usize),
+}
+
+impl Eq for Visit {}
+
+impl PartialEq<Self> for Visit {
+    fn eq(&self, other: &Self) -> bool {
+        self.x == other.x && self.y == other.y
+    }
+}
+
+impl PartialOrd<Self> for Visit {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.score.cmp(&other.score).reverse())
+    }
+}
+
+impl Ord for Visit {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.score.cmp(&other.score).reverse()
+    }
+}
+
 fn visit(map: &HashMap<(i32, i32), u8>, width: i32, height: i32) -> usize {
     let mut best = usize::MAX;
-    let mut to_visit = HashSet::new();
+    let mut to_visit = BinaryHeap::new();
     let mut scores = HashMap::<(i32, i32), usize>::new();
     scores.insert((0, 0), 0);
-    to_visit.insert((0, 0));
+    to_visit.push(Visit { x: 0, y: 0, score: (0, 0, 0) });
 
     while !to_visit.is_empty() {
-        let &(start_x, start_y) = to_visit
-            .iter()
-            .max_by_key(|&&(x, y)| {
-                //, Reverse(*scores.entry((x, y)).or_insert(usize::MAX)))
-                (
-                    Reverse(x + y),
-                    Reverse(i32::abs(x - y)),
-                    Reverse(*scores.entry((x, y)).or_insert(usize::MAX)),
-                )
-            })
-            .unwrap();
-
-        to_visit.remove(&(start_x, start_y));
+        let Visit { x: start_x, y: start_y, .. } = to_visit.pop().unwrap();
 
         let &mut score = scores.entry((start_x, start_y)).or_insert(usize::MAX);
         neighbours(start_x, start_y, width, height, |x, y| {
@@ -61,7 +75,7 @@ fn visit(map: &HashMap<(i32, i32), u8>, width: i32, height: i32) -> usize {
                 return;
             }
 
-            to_visit.insert((x, y));
+            to_visit.push(Visit { x, y, score: (x + y, i32::abs(x - y), current) });
         });
     }
     best
