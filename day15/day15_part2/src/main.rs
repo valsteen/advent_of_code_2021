@@ -50,25 +50,28 @@ impl Ord for Visit {
 fn visit(map: &HashMap<(i32, i32), u8>, width: i32, height: i32) -> usize {
     let mut best = usize::MAX;
     let mut to_visit = BinaryHeap::new();
-    let mut scores = HashMap::<(i32, i32), usize>::new();
+    let mut scores = HashMap::<(i32, i32), usize>::from_iter(map.iter().map(|(&(x,y), _)|{
+        ((x,y), usize::MAX)
+    }));
+
     scores.insert((0, 0), 0);
     to_visit.push(Visit { x: 0, y: 0, score: (0, 0, 0) });
 
     while !to_visit.is_empty() {
         let Visit { x: start_x, y: start_y, .. } = to_visit.pop().unwrap();
 
-        let &mut score = scores.entry((start_x, start_y)).or_insert(usize::MAX);
+        let &score = scores.get(&(start_x, start_y)).unwrap();
         neighbours(start_x, start_y, width, height, |x, y| {
             let &risk = map.get(&(x, y)).unwrap();
 
             let current = risk as usize + score;
-            let &mut previous_best = scores.entry((x, y)).or_insert(usize::MAX);
+            let previous_best = scores.get_mut(&(x, y)).unwrap();
 
-            if previous_best <= current || best <= current {
+            if *previous_best <= current || best <= current {
                 return;
             }
 
-            scores.insert((x, y), current);
+            *previous_best = current ;
 
             if x == width - 1 && y == height - 1 {
                 best = best.min(current);
