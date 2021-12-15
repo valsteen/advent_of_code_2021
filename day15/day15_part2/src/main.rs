@@ -52,12 +52,12 @@ fn visit(map: &[Vec<u8>]) -> usize {
                 return;
             }
 
+            visited.insert((x, y), current);
+
             if x == width * 5 - 1 && y == height * 5 - 1 {
                 best = best.min(current);
                 return;
             }
-
-            visited.insert((x, y), current);
 
             to_visit.insert((x, y));
         });
