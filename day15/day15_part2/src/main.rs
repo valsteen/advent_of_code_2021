@@ -37,13 +37,15 @@ impl PartialEq<Self> for Visit {
 
 impl PartialOrd<Self> for Visit {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.score.cmp(&other.score).reverse())
+        Some(self.cmp(other))
     }
 }
 
 impl Ord for Visit {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.score.cmp(&other.score).reverse()
+        self.score.2.cmp(&other.score.2).reverse().then(
+            self.score.0.cmp(&other.score.0)
+        )
     }
 }
 
