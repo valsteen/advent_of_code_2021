@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use std::io;
 use std::io::BufRead;
 
-fn neighbours(x: usize, y: usize, width: usize, height: usize, mut f: impl FnMut(usize, usize)) {
+fn neighbours(x: i32, y: i32, width: i32, height: i32, mut f: impl FnMut(i32, i32)) {
     if x > 0 {
         f(x - 1, y);
     }
@@ -21,10 +21,10 @@ fn neighbours(x: usize, y: usize, width: usize, height: usize, mut f: impl FnMut
     }
 }
 
-fn visit(map: &HashMap<(usize, usize), u8>, width: usize, height: usize) -> usize {
+fn visit(map: &HashMap<(i32, i32), u8>, width: i32, height: i32) -> usize {
     let mut best = usize::MAX;
     let mut to_visit = HashSet::new();
-    let mut scores = HashMap::<(usize, usize), usize>::new();
+    let mut scores = HashMap::<(i32, i32), usize>::new();
     scores.insert((0, 0), 0);
     to_visit.insert((0, 0));
 
@@ -32,7 +32,12 @@ fn visit(map: &HashMap<(usize, usize), u8>, width: usize, height: usize) -> usiz
         let &(start_x, start_y) = to_visit
             .iter()
             .max_by_key(|&&(x, y)| {
-                (Reverse(x + y), Reverse(*scores.entry((x, y)).or_insert(usize::MAX)))
+                //, Reverse(*scores.entry((x, y)).or_insert(usize::MAX)))
+                (
+                    Reverse(x + y),
+                    Reverse(i32::abs(x - y)),
+                    Reverse(*scores.entry((x, y)).or_insert(usize::MAX)),
+                )
             })
             .unwrap();
 
@@ -64,10 +69,10 @@ fn visit(map: &HashMap<(usize, usize), u8>, width: usize, height: usize) -> usiz
 
 fn main() {
     let stdin = io::stdin();
-    let mut max_x = 0;
-    let mut max_y = 0;
+    let mut max_x: i32 = 0;
+    let mut max_y: i32 = 0;
 
-    let mut map: HashMap<(usize, usize), u8> = stdin
+    let mut map: HashMap<(i32, i32), u8> = stdin
         .lock()
         .lines()
         .flatten()
@@ -76,11 +81,11 @@ fn main() {
             line.bytes()
                 .enumerate()
                 .map(|(x, c)| {
-                    max_x = max_x.max(x);
-                    max_y = max_y.max(y);
-                    ((x, y), c - b'0')
+                    max_x = max_x.max(x as i32);
+                    max_y = max_y.max(y as i32);
+                    ((x as i32, y as i32), c - b'0')
                 })
-                .collect::<Vec<((usize, usize), u8)>>()
+                .collect::<Vec<((i32, i32), u8)>>()
         })
         .flatten()
         .collect();
