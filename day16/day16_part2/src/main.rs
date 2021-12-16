@@ -99,34 +99,41 @@ impl Packet {
             }
         }
     }
-}
 
-fn get_value(packet: &Packet) -> usize {
-    match &packet.contents {
-        &PacketContents::Value(value) => value,
-        PacketContents::Sum(packets) => packets.iter().map(get_value).sum(),
-        PacketContents::Product(packets) => packets.iter().map(get_value).product(),
-        PacketContents::Minimum(packets) => packets.iter().map(get_value).min().unwrap(),
-        PacketContents::Maximum(packets) => packets.iter().map(get_value).max().unwrap(),
-        PacketContents::GreaterThan(packets) => {
-            if get_value(packets.get(0).unwrap()) > get_value(packets.get(1).unwrap()) {
-                1
-            } else {
-                0
+    fn get_value(self) -> usize {
+        match self.contents {
+            PacketContents::Value(value) => value,
+            PacketContents::Sum(packets) => packets.into_iter().map(Self::get_value).sum(),
+            PacketContents::Product(packets) => packets.into_iter().map(Self::get_value).product(),
+            PacketContents::Minimum(packets) => {
+                packets.into_iter().map(Self::get_value).min().unwrap()
             }
-        }
-        PacketContents::LessThan(packets) => {
-            if get_value(packets.get(0).unwrap()) < get_value(packets.get(1).unwrap()) {
-                1
-            } else {
-                0
+            PacketContents::Maximum(packets) => {
+                packets.into_iter().map(Self::get_value).max().unwrap()
             }
-        }
-        PacketContents::EqualTo(packets) => {
-            if get_value(packets.get(0).unwrap()) == get_value(packets.get(1).unwrap()) {
-                1
-            } else {
-                0
+            PacketContents::GreaterThan(packets) => {
+                let (packet1, packet2) = packets.into_iter().take(2).tuples().next().unwrap();
+                if packet1.get_value() > packet2.get_value() {
+                    1
+                } else {
+                    0
+                }
+            }
+            PacketContents::LessThan(packets) => {
+                let (packet1, packet2) = packets.into_iter().take(2).tuples().next().unwrap();
+                if packet1.get_value() < packet2.get_value() {
+                    1
+                } else {
+                    0
+                }
+            }
+            PacketContents::EqualTo(packets) => {
+                let (packet1, packet2) = packets.into_iter().take(2).tuples().next().unwrap();
+                if packet1.get_value() == packet2.get_value() {
+                    1
+                } else {
+                    0
+                }
             }
         }
     }
@@ -143,5 +150,5 @@ fn main() {
         packet
     });
 
-    println!("{}", get_value(&lines.next().unwrap()));
+    println!("{}", lines.next().unwrap().get_value());
 }
