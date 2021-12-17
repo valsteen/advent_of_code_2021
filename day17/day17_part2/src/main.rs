@@ -29,11 +29,7 @@ impl Position {
         self.x += self.x_velocity;
         self.y += self.y_velocity;
 
-        self.x_velocity += match self.x_velocity.cmp(&0) {
-            Ordering::Less => 1,
-            Ordering::Equal => 0,
-            Ordering::Greater => -1,
-        };
+        self.x_velocity -= self.x_velocity.signum();
         self.y_velocity -= 1;
     }
 
