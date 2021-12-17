@@ -29,7 +29,7 @@ impl Position {
         self.x += self.x_velocity;
         self.y += self.y_velocity;
 
-        self.x_velocity -= self.x_velocity.signum() ;
+        self.x_velocity -= self.x_velocity.signum();
         self.y_velocity -= 1;
     }
 
