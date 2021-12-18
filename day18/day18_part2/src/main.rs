@@ -1,4 +1,5 @@
 use itertools::Itertools;
+use rayon::prelude::*;
 use std::borrow::Borrow;
 use std::cell::RefCell;
 use std::fmt::{Debug, Formatter};
@@ -326,28 +327,33 @@ fn main() {
 
     let lines = stdin.lock().lines().flatten().map(Node::from_string).collect_vec();
 
-    let mut best_magnitude = 0;
-
     for line in lines.iter() {
         reduce(line)
     }
 
-    for combination in lines.iter().permutations(2) {
-        let root = Rc::new(RefCell::new(Node::Pair(vec![], Weak::new())));
-        for node in combination {
-            let node = {
-                let node_inner = RefCell::borrow(node);
-                Node::from_string(format!("{:?}", node_inner.deref()))
-            };
-            let node = Node::set_parent(&node, &Rc::downgrade(&root));
-            Node::add_node(&root, node);
-        }
+    let best = lines
+        .iter()
+        .map(|node| {
+            let node_inner = RefCell::borrow(node);
+            format!("{:?}", node_inner.deref())
+        })
+        .permutations(2)
+        .collect_vec()
+        .into_par_iter()
+        .map(|combination| {
+            let root = Rc::new(RefCell::new(Node::Pair(vec![], Weak::new())));
+            for node in combination {
+                let node = Node::from_string(node);
+                let node = Node::set_parent(&node, &Rc::downgrade(&root));
+                Node::add_node(&root, node);
+            }
 
-        reduce(&root);
-        let root_inner = RefCell::borrow(&root);
-        let magnitude = root_inner.magnitude();
-        best_magnitude = best_magnitude.max(magnitude);
-    }
+            reduce(&root);
+            let root_inner = RefCell::borrow(&root);
+            root_inner.magnitude()
+        })
+        .max()
+        .unwrap();
 
-    println!("{}", best_magnitude);
+    println!("{}", best);
 }
