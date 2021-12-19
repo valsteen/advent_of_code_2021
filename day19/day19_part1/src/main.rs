@@ -82,11 +82,11 @@ impl From<&[i32]> for Coordinates {
 }
 
 struct LockedData {
-    discovered: HashSet<(i32,i32,i32)>,
+    discovered: HashSet<(i32, i32, i32)>,
     known_scanner_to_test: VecDeque<usize>,
     unknown_scanners: Vec<usize>,
     orientations: Vec<Option<usize>>,
-    distances: Vec<Option<(i32,i32,i32)>>
+    distances: Vec<Option<(i32, i32, i32)>>,
 }
 
 fn main() {
@@ -112,7 +112,7 @@ fn main() {
     known_scanner_to_test.push_back(0);
     let unknown_scanners = (1..scanners.len()).collect_vec();
     let mut orientations = vec![None; scanners.len()];
-    let mut distances =vec![None; scanners.len()];
+    let mut distances = vec![None; scanners.len()];
     orientations[0] = Some(0);
     distances[0] = Some((0, 0, 0));
     let discovered = HashSet::<_>::from_iter(scanners[0].iter().map(|p| {
@@ -120,21 +120,23 @@ fn main() {
         (coordinates.x, coordinates.y, coordinates.z)
     }));
 
-    let locked_data = Mutex::new(LockedData{
+    let locked_data = Mutex::new(LockedData {
         discovered,
         known_scanner_to_test,
         unknown_scanners,
         orientations,
-        distances
+        distances,
     });
 
     // clippy didn't spot that a while would keep the lock and lead to a deadlock
     #[allow(clippy::while_let_loop)]
     loop {
-        let known_scanner = if let Some(known_scanner) = locked_data.lock().unwrap().known_scanner_to_test.pop_front() {
+        let known_scanner = if let Some(known_scanner) =
+            locked_data.lock().unwrap().known_scanner_to_test.pop_front()
+        {
             known_scanner
         } else {
-            break
+            break;
         };
         let unknown_scanners = { locked_data.lock().unwrap().unknown_scanners.clone() };
         unknown_scanners.into_par_iter().for_each(|unknown_scanner| {
@@ -144,8 +146,8 @@ fn main() {
                         .par_iter()
                         .map(|known_point| {
                             let mut distances = HashMap::<_, usize>::new();
-                            let known_coordinates =
-                                &known_point.orientations[locked_data.lock().unwrap().orientations[known_scanner].unwrap()];
+                            let known_coordinates = &known_point.orientations
+                                [locked_data.lock().unwrap().orientations[known_scanner].unwrap()];
                             for unknown_point in &scanners[unknown_scanner] {
                                 let unknown_coordinates = &unknown_point.orientations[orientation];
                                 *distances
@@ -192,7 +194,6 @@ fn main() {
                     -distance.2 + known_distance.2,
                 ));
                 locked_data.known_scanner_to_test.push_back(unknown_scanner);
-
 
                 for point in scanners[unknown_scanner].iter() {
                     let mut coordinates = point.orientations[orientation].clone();
