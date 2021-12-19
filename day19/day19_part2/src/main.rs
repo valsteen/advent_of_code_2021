@@ -1,4 +1,5 @@
 use itertools::Itertools;
+use rayon::prelude::*;
 use std::borrow::Borrow;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::fmt::{Debug, Display, Formatter};
@@ -51,7 +52,7 @@ impl Coordinates {
             [self.z, self.x, self.y],
             [self.z, self.y, -self.x],
         ]
-            .map(|pos| Coordinates::from(&pos[..]))
+        .map(|pos| Coordinates::from(&pos[..]))
     }
 }
 
@@ -112,71 +113,78 @@ fn main() {
 
     while let Some(known_scanner) = known_scanner_to_test.pop_front() {
         for unknown_scanner in unknown_scanners.clone() {
-            let mut scores = vec![];
-            for orientation in 0..24 {
-                let mut distances = HashMap::<_, usize>::new();
-                for known_point in &scanners[known_scanner] {
-                    let known_coordinates =
-                        &known_point.orientations[orientations[known_scanner].unwrap()];
-                    for unknown_point in &scanners[unknown_scanner] {
-                        let unknown_coordinates = &unknown_point.orientations[orientation];
-                        *distances
-                            .entry((
-                                known_coordinates.x - unknown_coordinates.x,
-                                known_coordinates.y - unknown_coordinates.y,
-                                known_coordinates.z - unknown_coordinates.z,
-                            ))
-                            .or_default() += 1;
-                    }
-                }
-                let (distance, _) = distances.iter().max_by_key(|&(_, &matches)| matches).unwrap();
-                scores.push((distances.len(), orientation, *distance))
-            }
+            let (orientation, distance) =
+                match (0..24).into_par_iter().find_map_first(|orientation| {
+                    let distances = scanners[known_scanner]
+                        .par_iter()
+                        .map(|known_point| {
+                            let mut distances = HashMap::<_, usize>::new();
+                            let known_coordinates =
+                                &known_point.orientations[orientations[known_scanner].unwrap()];
+                            for unknown_point in &scanners[unknown_scanner] {
+                                let unknown_coordinates = &unknown_point.orientations[orientation];
+                                *distances
+                                    .entry((
+                                        known_coordinates.x - unknown_coordinates.x,
+                                        known_coordinates.y - unknown_coordinates.y,
+                                        known_coordinates.z - unknown_coordinates.z,
+                                    ))
+                                    .or_default() += 1;
+                            }
+                            distances
+                        })
+                        .reduce(
+                            HashMap::new,
+                            |mut acc, distances: HashMap<(i32, i32, i32), usize>| {
+                                for (coordinates, matches) in distances.into_iter() {
+                                    *acc.entry(coordinates).or_default() += matches
+                                }
+                                acc
+                            },
+                        );
 
-            scores.sort_unstable_by_key(|(score, ..)| *score);
-
-            for (_, orientation, distance) in scores {
-                let mut matches = 0;
-                let known_coordinates = scanners[known_scanner]
-                    .iter()
-                    .map(|p| p.orientations[orientations[known_scanner].unwrap()].clone())
-                    .collect_vec();
-                for point in &scanners[unknown_scanner] {
-                    let mut unknown_coordinates = point.orientations[orientation].clone();
-                    unknown_coordinates.x += distance.0;
-                    unknown_coordinates.y += distance.1;
-                    unknown_coordinates.z += distance.2;
-                    if known_coordinates.contains(&unknown_coordinates) {
-                        matches += 1;
+                    let (&distance, &k) =
+                        distances.iter().max_by_key(|&(_, &matches)| matches).unwrap();
+                    if k >= 12 {
+                        Some((orientation, distance))
+                    } else {
+                        None
                     }
-                }
-                if matches >= 12 {
-                    unknown_scanners.retain(|&k| k != unknown_scanner);
-                    orientations[unknown_scanner] = Some(orientation);
-                    let known_distance = distances[known_scanner].unwrap();
-                    distances[unknown_scanner] = Some((
-                        -distance.0 + known_distance.0,
-                        -distance.1 + known_distance.1,
-                        -distance.2 + known_distance.2,
-                    ));
-                    known_scanner_to_test.push_back(unknown_scanner);
+                }) {
+                    None => continue,
+                    Some((orientation, distance)) => (orientation, distance),
+                };
 
-                    for point in scanners[unknown_scanner].iter() {
-                        let mut coordinates = point.orientations[orientation].clone();
-                        coordinates.x -= -distance.0 + known_distance.0;
-                        coordinates.y -= -distance.1 + known_distance.1;
-                        coordinates.z -= -distance.2 + known_distance.2;
-                        discovered.insert((coordinates.x, coordinates.y, coordinates.z));
-                    }
-                }
+            unknown_scanners.retain(|&k| k != unknown_scanner);
+            orientations[unknown_scanner] = Some(orientation);
+            let known_distance = distances[known_scanner].unwrap();
+            distances[unknown_scanner] = Some((
+                -distance.0 + known_distance.0,
+                -distance.1 + known_distance.1,
+                -distance.2 + known_distance.2,
+            ));
+            known_scanner_to_test.push_back(unknown_scanner);
+
+            for point in scanners[unknown_scanner].iter() {
+                let mut coordinates = point.orientations[orientation].clone();
+                coordinates.x -= -distance.0 + known_distance.0;
+                coordinates.y -= -distance.1 + known_distance.1;
+                coordinates.z -= -distance.2 + known_distance.2;
+                discovered.insert((coordinates.x, coordinates.y, coordinates.z));
             }
         }
     }
 
-    let max_distance = distances.iter().combinations(2).map(|positions| {
-        let position_1 = positions[0].unwrap();
-        let position_2 = positions[1].unwrap();
-        (position_1.0-position_2.0).abs() + (position_1.1-position_2.1).abs() + (position_1.2-position_2.2).abs()
-    }).max().unwrap();
-    println!("{}", max_distance);
+    let (position_1, position_2) = distances
+        .iter()
+        .flatten()
+        .minmax_by_key(|p| p.0 * p.0 + p.1 * p.1 + p.2 * p.2)
+        .into_option()
+        .unwrap();
+    println!(
+        "{}",
+        (position_1.0 - position_2.0).abs()
+            + (position_1.1 - position_2.1).abs()
+            + (position_1.2 - position_2.2).abs()
+    );
 }
