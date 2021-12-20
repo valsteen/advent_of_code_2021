@@ -21,11 +21,6 @@ fn zone(input: &[Vec<u8>], x: i32, y: i32, default: u8) -> usize {
         .fold(0, |acc, bit| (acc << 1) + bit as usize)
 }
 
-#[inline]
-fn enhance(input: &[Vec<u8>], enhancement: &[u8], x: i32, y: i32, default: u8) -> u8 {
-    enhancement[zone(input, x, y, default)]
-}
-
 fn next_default(default: u8, enhancement: &[u8]) -> u8 {
     if default == 1 {
         enhancement[(1 << 9) - 1]
@@ -38,7 +33,7 @@ fn enhance_image(image: &[Vec<u8>], enhancement: &[u8], default: u8) -> Vec<Vec<
     (-1..=image[0].len() as i32)
         .into_par_iter()
         .map(|y| {
-            (-1..=image.len() as i32).map(|x| enhance(image, enhancement, x, y, default)).collect()
+            (-1..=image.len() as i32).map(|x| enhancement[zone(image, x, y, default)]).collect()
         })
         .collect()
 }
