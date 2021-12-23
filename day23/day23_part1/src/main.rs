@@ -196,21 +196,14 @@ impl Game {
         amphipod: Amphipod,
         mut f: impl FnMut(usize, usize),
     ) {
+        if y >= 2 {
+            return;
+        }
+        
         let reserved_room =
             self.destinations
                 .iter()
-                .find_map(|(&dest_x, &value)| if value == amphipod { Some(dest_x) } else { None });
-
-        if y == 2 || y == 3 {
-            if reserved_room.is_none() || reserved_room == Some(x) {
-                let other =
-                    if y == 2 { self.amphipods.get(&(x, 3)) } else { self.amphipods.get(&(x, 2)) };
-                if other == Some(&amphipod) || other.is_none() {
-                    f(x, y)
-                }
-            }
-            return;
-        }
+                .find_map(|(&dest_x, &value)| if value == amphipod { Some(dest_x) } else { None }).unwrap();
 
         for direction in [(x + 1..=9).collect::<Vec<usize>>(), (3..=x - 1).rev().collect()] {
             for dest_x in direction {
@@ -218,20 +211,9 @@ impl Game {
                     break;
                 }
 
-                if reserved_room.is_some() {
-                    if reserved_room == Some(dest_x) {
-                        if self.amphipods.contains_key(&(dest_x, 3)) {
-                            if !self.amphipods.contains_key(&(dest_x, 2)) {
-                                f(dest_x, 2)
-                            }
-                        } else {
-                            f(dest_x, 3)
-                        }
-                    }
-                } else if !self.destinations.contains_key(&dest_x) && [3, 5, 7, 9].contains(&dest_x)
-                {
-                    if let Some(&other) = self.amphipods.get(&(dest_x, 3)) {
-                        if other == amphipod && !self.amphipods.contains_key(&(dest_x, 2)) {
+                if reserved_room == dest_x {
+                    if self.amphipods.contains_key(&(dest_x, 3)) {
+                        if !self.amphipods.contains_key(&(dest_x, 2)) {
                             f(dest_x, 2)
                         }
                     } else {
