@@ -85,7 +85,9 @@ impl Display for Game {
         let mut template = (r#"#############
 #...........#
 ###.#.#.#.###
-  #.#.#.#.#
+  #.#.#.#.#__
+  #.#.#.#.#__
+  #.#.#.#.#__
   #########"#)
             .chars()
             .collect::<Vec<_>>();
@@ -122,14 +124,14 @@ impl Game {
             .sum::<i32>()
     }
     fn winner(&self) -> bool {
-        self.destinations.len() == 4 && self.done() == 16
+        self.destinations.len() == 4 && self.done() == 32
     }
     fn next(self) -> impl Iterator<Item = Game> + 'static {
         self.amphipods
             .clone()
             .into_iter()
             .filter_map(move |((x, y), amphipod)| {
-                if y == 3 && self.destinations.get(&x) == Some(&amphipod) {
+                if y == 5 && self.destinations.get(&x) == Some(&amphipod) {
                     None
                 } else {
                     let mut next_games = vec![];
@@ -166,12 +168,9 @@ impl Game {
         mut f: impl FnMut(usize, usize),
     ) {
         if y == 1
-            || (y == 3
-                && (self.amphipods.contains_key(&(x, 2))
-                    || self.destinations.get(&x) == Some(&amphipod)))
-            || (y == 2
-                && self.destinations.get(&x) == Some(&amphipod)
-                && self.amphipods.get(&(x, 3)) == Some(&amphipod))
+            || (y > 2 && (2..y).any(|y| self.amphipods.contains_key(&(x, y))))
+            || (self.destinations.get(&x) == Some(&amphipod)
+                && (y + 1..=5).all(|y| self.amphipods.get(&(x, y)) == Some(&amphipod)))
         {
             return;
         }
@@ -212,14 +211,17 @@ impl Game {
                     break;
                 }
 
-                if reserved_room == dest_x {
-                    if self.amphipods.contains_key(&(dest_x, 3)) {
-                        if !self.amphipods.contains_key(&(dest_x, 2)) {
-                            f(dest_x, 2)
-                        }
-                    } else {
-                        f(dest_x, 3)
-                    }
+                if reserved_room == dest_x
+                    && ((3..=5).all(|y| {
+                        !self.amphipods.contains_key(&(dest_x, y))
+                            || self.amphipods.get(&(dest_x, y)) == Some(&amphipod)
+                    }))
+                {
+                    let dest_y = (2..=5)
+                        .rev()
+                        .find(|y| !self.amphipods.contains_key(&(dest_x, *y)))
+                        .unwrap();
+                    f(dest_x, dest_y)
                 }
             }
         }
@@ -228,7 +230,7 @@ impl Game {
 
 fn main() {
     let stdin = io::stdin();
-    let amphipods = stdin.lock().lines().flatten().enumerate().fold(
+    let mut amphipods = stdin.lock().lines().flatten().enumerate().fold(
         HashMap::new(),
         |mut amphipods, (y, line)| {
             for (x, c) in line.chars().enumerate() {
@@ -240,6 +242,22 @@ fn main() {
             amphipods
         },
     );
+    for x in [3, 5, 7, 9] {
+        amphipods.insert((x, 5), *amphipods.get(&(x, 3)).unwrap());
+    }
+
+    for (x, y, c) in [
+        (3, 3, 'D'),
+        (3, 4, 'D'),
+        (5, 3, 'C'),
+        (5, 4, 'B'),
+        (7, 3, 'B'),
+        (7, 4, 'A'),
+        (9, 3, 'A'),
+        (9, 4, 'C'),
+    ] {
+        amphipods.insert((x, y), Amphipod::try_from(c).unwrap());
+    }
 
     let game = Game {
         destinations: HashMap::from([
@@ -256,6 +274,7 @@ fn main() {
 
     let mut next_games = BinaryHeap::<Game>::new();
     next_games.push(game);
+
     let mut seen = HashMap::<String, usize>::new();
     while let Some(game) = next_games.pop() {
         if game.winner() {
