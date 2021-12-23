@@ -1,9 +1,11 @@
+use std::borrow::Borrow;
 use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::io;
 use std::io::BufRead;
 use std::ops::RangeInclusive;
 use std::str::FromStr;
+use rstar::{RTree, AABB, RTreeParams, RTreeObject};
 
 #[derive(Debug)]
 enum Direction {
@@ -97,9 +99,15 @@ impl FromStr for Instruction {
                 x: range_x.ok_or("no x range")?,
                 y: range_y.ok_or("no y range")?,
                 z: range_z.ok_or("no z range")?,
+                volume_type: VolumeType::Plain
             },
         })
     }
+}
+
+enum VolumeType {
+    Volumes(Vec<Volume>),
+    Plain
 }
 
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
@@ -107,6 +115,7 @@ struct Volume {
     x: RangeInclusive<i64>,
     y: RangeInclusive<i64>,
     z: RangeInclusive<i64>,
+    volume_type: VolumeType
 }
 
 impl PartialOrd for Volume {
@@ -126,6 +135,68 @@ impl Ord for Volume {
 }
 
 impl Volume {
+    fn contains(&self, volume: &Volume) -> bool {
+        self.x.start() <= volume.x.start() && self.x.end() >= volume.x.end()
+        && self.y.start() <= volume.y.start() && self.y.end() >= volume.y.end()
+        && self.z.start() <= volume.z.start() && self.z.end() >= volume.z.end()
+    }
+
+    fn matches(&mut self, volume: &Volume) -> Vec<&mut Volume>{
+        if self.intersects(volume) {
+            match &mut self.volume_type {
+                VolumeType::Volumes(volumes) => {
+                    volumes.iter_mut().filter_map(|part| {
+                        if part.intersects(volume) {
+                            Some(part.matches(volume))
+                        } else {
+                            None
+                        }
+                    }).flatten().collect()
+                }
+                VolumeType::Plain => {
+                    vec![&mut self]
+                }
+            }
+        } else {
+            vec![]
+        }
+    }
+
+    fn is_empty(&self) -> bool {
+        match &self.volume_type {
+            VolumeType::Volumes(v) => {
+                v.is_empty()
+            }
+            VolumeType::Plain => {
+                false
+            }
+        }
+    }
+    fn remove(&mut self, volume: &Volume) {
+        self.volume_type = match &self.volume_type {
+            VolumeType::Volumes(volumes) => {
+                let parts = volumes.into_iter().filter(|mut part| {
+                    let is_plain = match &part.volume_type {
+                        VolumeType::Volumes(_) => {
+                            true
+                        }
+                        VolumeType::Plain => {
+                            false
+                        }
+                    };
+                    if is_plain {
+                        !part.intersects(volume)
+                    } else {
+                        part.remove(volume);
+                        part.is_empty()
+                    }
+                }).collect();
+                VolumeType::Volumes(parts)
+            }
+            VolumeType::Plain => unreachable!()
+        }
+    }
+
     fn intersects(&self, volume: &Volume) -> bool {
         volume.x.start() <= self.x.end()
             && self.x.start() <= volume.x.end()
@@ -135,54 +206,76 @@ impl Volume {
             && self.z.start() <= volume.z.end()
     }
 
-    fn cut_x(self, x: i64) -> Vec<Volume> {
+    fn cut_x(&mut self, x: i64) {
         if self.x.contains(&x) {
-            vec![
-                Volume { x: *self.x.start()..=x - 1, y: self.y.clone(), z: self.z.clone() },
-                Volume { x: x..=*self.x.end(), y: self.y, z: self.z },
-            ]
-        } else {
-            vec![self]
+            self.volume_type = match &self.volume_type {
+                VolumeType::Volumes(mut volumes) => {
+                    for volume in &mut volumes {
+                        volume.cut_x(x);
+                    }
+                    VolumeType::Volumes(volumes)
+                }
+                VolumeType::Plain => {
+                    VolumeType::Volumes(
+                        vec![
+                            Volume { x: *self.x.start()..=x - 1, y: self.y.clone(), z: self.z.clone(), volume_type: VolumeType::Plain },
+                            Volume { x: x..=*self.x.end(), y: self.y.clone(), z: self.z.clone(), volume_type: VolumeType::Plain }
+                        ],
+                    )
+                }
+            }
         }
     }
 
-    fn cut_y(self, y: i64) -> Vec<Volume> {
+    fn cut_y(&mut self, y: i64) {
         if self.y.contains(&y) {
-            vec![
-                Volume { x: self.x.clone(), y: *self.y.start()..=y - 1, z: self.z.clone() },
-                Volume { x: self.x, y: y..=*self.y.end(), z: self.z },
-            ]
-        } else {
-            vec![self]
+            self.volume_type = match &self.volume_type {
+                VolumeType::Volumes(mut volumes) => {
+                    for volume in &mut volumes {
+                        volume.cut_y(y);
+                    }
+                    VolumeType::Volumes(volumes)
+                }
+                VolumeType::Plain => {
+                    VolumeType::Volumes(
+                        vec![
+                            Volume { x: self.x.clone(), y: *self.y.start()..=y - 1, z: self.z.clone(), volume_type: VolumeType::Plain },
+                            Volume { x: self.x.clone(), y: y..=*self.y.end(), z: self.z.clone(), volume_type: VolumeType::Plain },
+                        ],
+                    )
+                }
+            }
         }
     }
 
-    fn cut_z(self, z: i64) -> Vec<Volume> {
+    fn cut_z(&mut self, z: i64) {
         if self.z.contains(&z) {
-            vec![
-                Volume { x: self.x.clone(), y: self.y.clone(), z: *self.z.start()..=z - 1 },
-                Volume { x: self.x, y: self.y, z: z..=*self.z.end() },
-            ]
-        } else {
-            vec![self]
+            self.volume_type = match &self.volume_type {
+                VolumeType::Volumes(mut volumes) => {
+                    for volume in &mut volumes {
+                        volume.cut_z(z);
+                    }
+                    VolumeType::Volumes(volumes)
+                }
+                VolumeType::Plain => {
+                    VolumeType::Volumes(
+                        vec![
+                            Volume { x: self.x.clone(), y: self.y.clone(), z: *self.z.start()..=z - 1, volume_type: VolumeType::Plain },
+                            Volume { x: self.x.clone(), y: self.y.clone(), z: z..=*self.z.end(), volume_type: VolumeType::Plain },
+                        ],
+                    )
+                }
+            }
         }
     }
 
-    fn cut(self, volume: &Volume) -> Vec<Volume> {
-        self.cut_x(*volume.x.start())
-            .into_iter()
-            .map(|part| part.cut_x(*volume.x.end() + 1))
-            .flatten()
-            .map(|part| part.cut_y(*volume.y.start()))
-            .flatten()
-            .map(|part| part.cut_y(*volume.y.end() + 1))
-            .flatten()
-            .map(|part| part.cut_z(*volume.z.start()))
-            .flatten()
-            .map(|part| part.cut_z(*volume.z.end() + 1))
-            .flatten()
-            .filter(|volume| volume.volume() > 0)
-            .collect()
+    fn cut(&mut self, volume: &Volume) {
+        self.cut_x(*volume.x.start());
+        self.cut_x(*volume.x.end() + 1);
+        self.cut_y(*volume.y.start());
+        self.cut_y(*volume.y.end() + 1);
+        self.cut_z(*volume.z.start());
+        self.cut_z(*volume.z.end() + 1);
     }
 
     fn volume(&self) -> usize {
@@ -201,23 +294,22 @@ fn main() -> Result<(), &'static str> {
         .map(|line| str::parse(&line))
         .collect::<Result<Vec<Instruction>, _>>()?;
 
-    let mut grid = HashSet::new();
-    for instruction in instructions {
-        let intersections = grid
-            .iter()
-            .filter(|volume| instruction.volume.intersects(volume))
-            .cloned()
-            .collect::<Vec<Volume>>();
-        let mut instruction_parts = vec![instruction.volume.clone()];
-        for volume in intersections {
-            grid.remove(&volume);
+    let mut grid = Volume {
+        x: i64::MIN..=i64::MAX,
+        y: i64::MIN..=i64::MAX,
+        z: i64::MIN..=i64::MAX,
+        volume_type: VolumeType::Volumes(vec![])
+    };
 
+    for mut instruction in instructions {
+        let intersections = grid.matches(&instruction.volume);
+
+        for volume in intersections {
             if instruction.on {
-                instruction_parts =
-                    instruction_parts.into_iter().map(|part| part.cut(&volume)).flatten().collect();
+                instruction.volume.cut(&volume);
             }
 
-            let volume_parts = volume.cut(&instruction.volume);
+            volume.cut(&instruction.volume);
             for volume in volume_parts {
                 if !volume.intersects(&instruction.volume) {
                     grid.insert(volume);
@@ -232,7 +324,7 @@ fn main() -> Result<(), &'static str> {
         }
     }
 
-    let cubes_on = grid.into_iter().map(|volume| volume.volume()).sum::<usize>();
+    let cubes_on = grid.iter().map(|volume| volume.volume()).sum::<usize>();
     println!("{}", cubes_on);
     Ok(())
 }
