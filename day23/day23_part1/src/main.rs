@@ -38,49 +38,46 @@ impl TryFrom<char> for Amphipod {
 }
 
 #[derive(Clone)]
-struct Game {
-    destinations: HashMap<usize, Amphipod>,
+struct Game<'a> {
+    destinations: &'a HashMap<usize, Amphipod>,
     amphipods: HashMap<(usize, usize), Amphipod>,
     energy: usize,
 }
 
-impl PartialEq<Self> for Game {
+impl<'a> PartialEq<Self> for Game<'a> {
     fn eq(&self, other: &Self) -> bool {
         self.cmp(other) == Ordering::Equal
     }
 }
 
-impl PartialOrd<Self> for Game {
+impl<'a> PartialOrd<Self> for Game<'a> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl Eq for Game {}
+impl<'a> Eq for Game<'a> {}
 
-impl Ord for Game {
+impl<'a> Ord for Game<'a> {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.destinations
-            .len()
-            .cmp(&other.destinations.len())
-            .then(self.energy.cmp(&other.energy).reverse())
+        self.energy
+            .cmp(&other.energy)
+            .reverse()
             .then(self.done().cmp(&other.done()))
             .then(format!("{:?}", self).cmp(&format!("{:?}", other)))
     }
 }
 
-impl Debug for Game {
+impl<'a> Debug for Game<'a> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let mut d = self.destinations.iter().collect::<Vec<_>>();
-        d.sort_by_key(|(&x, &a)| (a, x));
         let mut a = self.amphipods.iter().collect::<Vec<_>>();
         a.sort_by_key(|(&(x, y), &a)| (a, x, y));
 
-        f.write_str(&format!("{:?} {:?} {:?} {}", d, a, self.energy, self.winner()))
+        f.write_str(&format!("{:?} {:?} {}", a, self.energy, self.winner()))
     }
 }
 
-impl Display for Game {
+impl Display for Game<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let mut template = (r#"#############
 #...........#
@@ -96,13 +93,11 @@ impl Display for Game {
     }
 }
 
-impl Game {
+impl<'a> Game<'a> {
     fn state(&self) -> String {
-        let mut d = self.destinations.iter().collect::<Vec<_>>();
-        d.sort_by_key(|(&x, &a)| (a, x));
         let mut a = self.amphipods.iter().collect::<Vec<_>>();
         a.sort_by_key(|(&(x, y), &a)| (a, x, y));
-        format!("{:?} {:?}", d, a)
+        format!("{:?}", a)
     }
 
     fn done(&self) -> i32 {
@@ -122,9 +117,9 @@ impl Game {
             .sum::<i32>()
     }
     fn winner(&self) -> bool {
-        self.destinations.len() == 4 && self.done() == 16
+        self.done() == 16
     }
-    fn next(self) -> impl Iterator<Item = Game> + 'static {
+    fn next(self) -> impl Iterator<Item = Game<'a>> + 'a {
         self.amphipods
             .clone()
             .into_iter()
@@ -136,21 +131,16 @@ impl Game {
                     let mut new_game = self.clone();
                     new_game.amphipods.remove(&(x, y));
 
-                    new_game.to_hallway_moves(x, y, amphipod, |dx, dy| {
+                    let mut add = |dx: usize, dy: usize| {
                         let mut next_game = new_game.clone();
                         let moves = dx.max(x) - dx.min(x) + dy.max(y) - dy.min(y);
                         next_game.amphipods.insert((dx, dy), amphipod);
                         next_game.energy += moves * amphipod.cost();
                         next_games.push(next_game)
-                    });
-                    new_game.to_room_moves(x, y, amphipod, |dx, dy| {
-                        let mut next_game = new_game.clone();
-                        let moves = dx.max(x) - dx.min(x) + dy.max(y) - dy.min(y);
-                        next_game.amphipods.insert((dx, dy), amphipod);
-                        next_game.energy += moves * amphipod.cost();
-                        next_game.destinations.insert(dx, amphipod);
-                        next_games.push(next_game);
-                    });
+                    };
+
+                    new_game.to_hallway_moves(x, y, amphipod, &mut add);
+                    new_game.to_room_moves(x, y, amphipod, &mut add);
 
                     Some(next_games)
                 }
@@ -163,7 +153,7 @@ impl Game {
         x: usize,
         y: usize,
         amphipod: Amphipod,
-        mut f: impl FnMut(usize, usize),
+        f: &mut impl FnMut(usize, usize),
     ) {
         if y == 1
             || (y == 3
@@ -194,17 +184,11 @@ impl Game {
         x: usize,
         y: usize,
         amphipod: Amphipod,
-        mut f: impl FnMut(usize, usize),
+        f: &mut impl FnMut(usize, usize),
     ) {
         if y >= 2 {
             return;
         }
-
-        let reserved_room = self
-            .destinations
-            .iter()
-            .find_map(|(&dest_x, &value)| if value == amphipod { Some(dest_x) } else { None })
-            .unwrap();
 
         for direction in [(x + 1..=9).collect::<Vec<usize>>(), (3..=x - 1).rev().collect()] {
             for dest_x in direction {
@@ -212,7 +196,7 @@ impl Game {
                     break;
                 }
 
-                if reserved_room == dest_x {
+                if self.destinations.get(&dest_x) == Some(&amphipod) {
                     if self.amphipods.contains_key(&(dest_x, 3)) {
                         if !self.amphipods.contains_key(&(dest_x, 2)) {
                             f(dest_x, 2)
@@ -241,16 +225,10 @@ fn main() {
         },
     );
 
-    let game = Game {
-        destinations: HashMap::from([
-            (3, Amphipod::A),
-            (5, Amphipod::B),
-            (7, Amphipod::C),
-            (9, Amphipod::D),
-        ]),
-        amphipods,
-        energy: 0,
-    };
+    let destinations =
+        HashMap::from([(3, Amphipod::A), (5, Amphipod::B), (7, Amphipod::C), (9, Amphipod::D)]);
+
+    let game = Game { destinations: &destinations, amphipods, energy: 0 };
 
     let mut best = usize::MAX;
 
